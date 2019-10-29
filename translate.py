@@ -184,34 +184,6 @@ def zh2en(src_content):
         result += parse_json[0][0][0]
     return result
 
-def zh2en_interface(request):
-    user_agent = GetUserAgent()
-    header = {
-        'Accpet': 'application/json, text/javascript, */*; 1=0.01',
-        "Content-Type": 'application/x-www-form-urlencoded; charset=UTF-8',
-        "Origin": 'http://speech.ths8.com:6080',
-        "Referer": 'http://speech.ths8.com:6080/translate/index.html',
-        "User-Agent": user_agent,
-    }
-    data2 = "text=%s&appId=1&appKey=1&type=zh2en"%(request)
-
-    #http://speech.ths8.com:10020/translateConnection/get/result?text=早餐&appId=1&appKey=1&type=zh2en
-    url = "http://speech.ths8.com:10020/translateConnection/translate.do"
-    #url_google = "https://translate.google.cn/translate_a/single?client=webapp&sl=zh-CN&tl=en&hl=zh-CN&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&source=bh&ssel=0&tsel=0&kc=1&tk=690327.834787&q=早餐"
-    print (url)
-    #response = requests.get(url)
-    response = requests.post(url, data=data2.encode('utf-8'), headers=header)
-    if request != None:
-        print(response.content)
-        parse_json = json.loads(str(response.content,encoding='utf-8'))
-        print("md5::::")
-        a = hashlib.md5()
-        a.update(response.content)
-        print(a.hexdigest())
-        result = parse_json['data']
-        print (result[:-1])
-        return result[:-1]
-    return None
 
 def zh2en_baidu(request):
     #url = http://api.fanyi.baidu.com/api/trans/vip/translate?q=apple&from=en&to=zh&appid=2015063000000001&salt=1435660288&sign=f89f9594663708c1605f3d736d01d2d4
@@ -221,8 +193,8 @@ def zh2en_baidu(request):
 def net_translate(request,translate_type):
     if request == None:
         return None
-    return zh2en_interface(request)
-    #return zh2en(request)
+    #return zh2en_interface(request)
+    return zh2en(request)
 
 def parse_reqest(request_data):
     data_list = str(request_data,encoding='gbk').split()
