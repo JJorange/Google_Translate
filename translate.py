@@ -186,7 +186,7 @@ def zh2en(src_content):
     request_url = GetRequestUrl(src_content)
     request_url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=%s" % (src_content)
 
-    proxy_list = GetProxy("usable_ip_10_14_tk.pkl")
+    proxy_list = GetProxy("usable_ip.pkl")
     response = SendRequest(request_url, proxy_list,src_content)
     if response != None:
         # result_file.write(content + ":")
