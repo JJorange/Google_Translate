@@ -4,9 +4,11 @@ import random
 import json
 import socket
 import hashlib
+
 from multiprocessing import Process
 from urllib.parse import unquote
 
+#用于获取谷歌翻译校验值tk值，在url中体现。
 class Py4Js():
     def __init__(self):
         self.ctx = execjs.compile("""
@@ -54,27 +56,33 @@ class Py4Js():
         print(text)
         return self.ctx.call("TL", text)
 
+#翻译本地文件时获取翻译目标
 def GetContentfFlile(filename):
     file = open(filename,"r")
     content_list = file.read().splitlines()
     file.close()
     return content_list
 
+#拼接翻译的url用于请求
 def GetRequestUrl(content):
     py4js = Py4Js()
     tk = py4js.getTk(content)
     print(content)
     print("tk:" + tk)
     url = "https://translate.google.cn/translate_a/"\
-          "single?client=webapp&sl=zh-CN&tl=en&hl=zh-CN&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&source=bh&ssel=0&tsel=0&kc=1&tk=%s&q=%s" % (tk,content)
+          "single?client=webapp&sl=zh-CN&tl=en&hl=zh-CN&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&dt=gt&source=bh&ssel=0&tsel=0&kc=1&tk=%s&q=%s" % (tk,content)
+    #return url
+    post_url = "https://translate.google.cn/translate_a/single?client=webapp&sl=zh-CN&tl=en&hl=zh-CN&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&dt=gt&source=bh&ssel=0&tsel=0&kc=1&tk=%s"%(tk)
     return url
 
+#通过文件获取代理ip
 def GetProxy(proxy_file):
     file = open(proxy_file)
     proxy_list = file.read().splitlines()
     file.close()
     return proxy_list
 
+#得到请求中需要的 useragent 字段，随机取一个避免重复，导致被封
 def GetUserAgent():
     '''
     功能：随机获取HTTP_User_Agent
@@ -118,37 +126,37 @@ def GetUserAgent():
     user_agent = random.choice(user_agents)
     return user_agent
 
-def SendRequest(request_url,proxy_list):
+#发送get请求
+def SendRequest(request_url,proxy_list,src_content):
     for ip_port in proxy_list:
         ip_port = random.choice(proxy_list)
         if ip_port == 0:
             continue
         user_agent = GetUserAgent()
-        header = {
-            "User-Agent":user_agent,
-        }
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (X11; U; Linux x86_64; zh-CN; rv:1.9.2.10) Gecko/20100922 Ubuntu/10.10 (maverick) Firefox/3.6.10',
-            'Connection': 'keep-alive'
-        }
-        #ip = "91.187.113.205:53281"
 
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3865.120 Safari/537.36',
+            #'Connection': 'keep-alive'
+        }
+
+        #ip = "91.187.113.205:53281"
         proxy = {
-            'http:':ip_port,
+            'https': ip_port
             # 'https': 'https://' + proxy,
         }
         #url = "https://translate.google.cn/translate_a/single?client=webapp&sl=zh-CN&tl=en&hl=zh-CN&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&source=bh&ssel=0&tsel=0&kc=1&tk=690327.834787&q=早餐"
         print(request_url)
         print(proxy)
-        r = requests.get(request_url, headers=header, proxy = proxy)
-        print("post:::")
+        print(src_content)
+        r = requests.get(request_url, headers=headers, proxies=proxy, timeout = 3)
         print(r.status_code)
         print("\t")
-        print(r.content)
+        print(str(r.content,encoding='utf-8'))
         if r.status_code != 200:
             ip_port = 0
             continue
         return r.content
+    return None
 
 def write_to_file(result_file,content,result):
     result_file.write(content + ":")
@@ -159,7 +167,7 @@ def write_to_file(result_file,content,result):
 
 def local_translate():
     filename = "translate_requst.txt"
-    proxies_file = "usable_ip.pkl2"
+    proxies_file = "usable_ip_d.pkl"
     content_list = GetContentfFlile(filename)
     result_file = open("translate_result.txt","w",encoding='utf-8')
     for content in content_list:
@@ -176,25 +184,23 @@ def local_translate():
 def zh2en(src_content):
     result = str()
     request_url = GetRequestUrl(src_content)
-    proxy_list = GetProxy("usable_ip.pkl")
-    response = SendRequest(request_url, proxy_list)
+    request_url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=en&dt=t&q=%s" % (src_content)
+
+    proxy_list = GetProxy("usable_ip_10_14_tk.pkl")
+    response = SendRequest(request_url, proxy_list,src_content)
     if response != None:
         # result_file.write(content + ":")
         parse_json = json.loads(str(response, encoding="utf-8"))
         result += parse_json[0][0][0]
     return result
 
-
-def zh2en_baidu(request):
-    #url = http://api.fanyi.baidu.com/api/trans/vip/translate?q=apple&from=en&to=zh&appid=2015063000000001&salt=1435660288&sign=f89f9594663708c1605f3d736d01d2d4
-    url = 1
-
-
 def net_translate(request,translate_type):
     if request == None:
         return None
-    #return zh2en_interface(request)
-    return zh2en(request)
+    result = zh2en(request)
+    print("net_translate :: result")
+    print(result)
+    return result
 
 def parse_reqest(request_data):
     data_list = str(request_data,encoding='gbk').split()
@@ -238,7 +244,7 @@ def handle_client(client_socket):
 
 if __name__ == "__main__":
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(("", 8001))
+    server_socket.bind(("", 8000))
     server_socket.listen(128)
 
     while True:
